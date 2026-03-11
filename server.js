@@ -1,14 +1,14 @@
+// server.js
 import express from "express";
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 
 const app = express();
 app.use(express.json());
 
-// חיבור ל-OpenAI – אין צורך ב-dotenv
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+// חיבור ל-OpenAI – בלי dotenv
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
-const openai = new OpenAIApi(configuration);
 
 // פונקציה שמייצרת HTML מתוך JSON
 function generateHTML(siteJSON) {
@@ -16,13 +16,13 @@ function generateHTML(siteJSON) {
 
   let html = `
   <!DOCTYPE html>
-  <html lang="he" dir="${style.direction || "rtl"}">
+  <html lang="he" dir="${style?.direction || "rtl"}">
   <head>
     <meta charset="UTF-8">
     <title>${site_name}</title>
     <style>
-      body { font-family: Arial, sans-serif; background: ${style.colors?.[0] || "#fff"}; color: ${style.colors?.[1] || "#000"}; margin: 0; padding: 0; }
-      header, footer { padding: 20px; text-align: center; background: ${style.colors?.[1] || "#000"}; color: ${style.colors?.[0] || "#fff"}; }
+      body { font-family: Arial, sans-serif; background: ${style?.colors?.[0] || "#fff"}; color: ${style?.colors?.[1] || "#000"}; margin: 0; padding: 0; }
+      header, footer { padding: 20px; text-align: center; background: ${style?.colors?.[1] || "#000"}; color: ${style?.colors?.[0] || "#fff"}; }
       section { padding: 40px; }
     </style>
   </head>
@@ -43,18 +43,15 @@ app.post("/generate", async (req, res) => {
   const prompt = req.body.prompt;
 
   try {
-    const completion = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
-        {
-          role: "system",
-          content: "You are a website planner. Convert user requests into JSON website structures."
-        },
+        { role: "system", content: "You are a website planner. Convert user requests into JSON website structures." },
         { role: "user", content: prompt }
       ]
     });
 
-    const aiJSON = JSON.parse(completion.data.choices[0].message.content);
+    const aiJSON = JSON.parse(completion.choices[0].message.content);
     const html = generateHTML(aiJSON);
 
     res.json({ aiJSON, html });
